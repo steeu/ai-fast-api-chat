@@ -1,0 +1,30 @@
+[project]
+name = "ai-chat-backend"
+version = "0.1.0"
+description = "FastAPI backend for the AI chat app"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+    "openai>=3.19.2",
+    "pydantic-settings>=2.15.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's Depends() in default arguments is intended
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Security"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
