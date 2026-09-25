@@ -13,7 +13,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "AI Chat"
+    app_name: str = "AI"
 
     llm_provider: Literal["openai", "fake"] = "openai"
     llm_model: str = "gpt-5.5"
