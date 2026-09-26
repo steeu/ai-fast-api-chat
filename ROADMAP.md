@@ -1,5 +1,12 @@
 # Roadmap
 
+## Übersicht
+
+| Nr. | Punkt | Status | Beschreibung |
+|---|---|---|---|
+| 2 | RAG: Fragen an eigene Dokumente | Offen | Word-, Excel- und PDF-Dateien aus einem Ordner indexieren und per Schalter im Chat mit Quellenangaben befragen. |
+| 1 | Kosten- und Token-Anzeige | ✅ Erledigt | Modell, Input-/Output-Tokens und geschätzte Kosten unter jeder Antwort, Summe pro Chat im Header. |
+
 ## 1. Kosten- und Token-Anzeige ✅ umgesetzt
 
 Nach jeder Antwort unter der Nachricht anzeigen: Input Tokens, Output Tokens, geschätzte Kosten, verwendetes Modell.
