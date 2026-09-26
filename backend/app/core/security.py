@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from typing import Annotated, Any
 
@@ -7,6 +8,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app.core.config import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 # auto_error=False: get_current_user decides (via AUTH_ENABLED) if a missing token is an error
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -82,7 +85,8 @@ def get_current_user(
             status.HTTP_503_SERVICE_UNAVAILABLE, detail="Login service unreachable."
         ) from exc
     except jwt.PyJWTError as exc:
-        # Never log or return the token itself
+        # Never log or return the token itself, only why it was rejected
+        logger.warning("Rejected access token: %s: %s", type(exc).__name__, exc)
         raise _unauthorized("Invalid or expired token") from exc
 
     user = User(id=claims["sub"], roles=_roles(claims, settings.zitadel_project_id or ""))
