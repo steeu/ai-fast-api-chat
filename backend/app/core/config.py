@@ -2,19 +2,32 @@ from functools import lru_cache
 from typing import Literal, Self
 
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from app.core.pricing import DEFAULT_PRICES, ModelPrice
 
 
 class Settings(BaseSettings):
-    """App configuration, read from environment variables or a .env file."""
+    """App configuration, read from a .env file or environment variables."""
 
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        # .env wins over exported shell variables, so stale exports can't shadow it. Environment
+        # variables still apply for values missing in .env (Docker has no .env, only --env-file).
+        return init_settings, dotenv_settings, env_settings, file_secret_settings
 
     app_name: str = "AI"
 

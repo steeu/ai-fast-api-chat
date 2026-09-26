@@ -31,7 +31,7 @@ Docker (single image: built frontend served by FastAPI from `/app/static`):
 docker build -t ai-chat . && docker run -p 8000:8000 --env-file .env ai-chat
 ```
 
-Configuration comes from `.env` (see `.env.example`); `Settings` reads `.env` or `../.env`, so the root `.env` works when running from `backend/`. Set `LLM_PROVIDER=fake` to run without an API key.
+Configuration comes from `.env` (see `.env.example`); `Settings` reads `.env` or `../.env`, so the root `.env` works when running from `backend/`. `.env` takes precedence over exported environment variables (`settings_customise_sources`); env vars only fill values missing in `.env` (Docker gets them via `--env-file`). Set `LLM_PROVIDER=fake` to run without an API key.
 
 ## Backend architecture
 

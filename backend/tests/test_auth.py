@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -108,9 +109,27 @@ def test_auth_config_hides_values_when_disabled(client: TestClient) -> None:
     assert client.get("/api/auth/config").json()["enabled"] is False
 
 
-def test_auth_enabled_without_zitadel_settings_fails_at_startup() -> None:
+def test_auth_enabled_without_zitadel_settings_fails_at_startup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ZITADEL_ISSUER", raising=False)
     with pytest.raises(ValueError, match="ZITADEL_ISSUER"):
         Settings(_env_file=None, auth_enabled=True)
+
+
+def test_env_file_wins_over_environment_variables(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("ZITADEL_ISSUER=https://from-env-file.zitadel.cloud\n")
+    monkeypatch.setenv("ZITADEL_ISSUER", "https://from-shell.zitadel.cloud")
+    monkeypatch.setenv("ZITADEL_CLIENT_ID", "client-from-shell")
+
+    settings = Settings(_env_file=env_file)
+
+    assert settings.zitadel_issuer == "https://from-env-file.zitadel.cloud"
+    # Values missing in .env still come from the environment (Docker --env-file)
+    assert settings.zitadel_client_id == "client-from-shell"
 
 
 def test_unreachable_key_endpoint_returns_503(auth_client: TestClient) -> None:
