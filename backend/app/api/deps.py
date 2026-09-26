@@ -27,7 +27,10 @@ def get_chat_service(
     provider: Annotated[LLMProvider, Depends(get_llm_provider)],
 ) -> ChatService:
     return ChatService(
-        provider=provider, system_prompt=settings.system_prompt, prices=settings.model_prices
+        provider=provider,
+        system_prompt=settings.system_prompt,
+        prices=settings.model_prices,
+        usd_to_chf=settings.usd_to_chf,
     )
 
 

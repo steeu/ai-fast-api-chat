@@ -24,5 +24,5 @@ class Usage(BaseModel):
 
 
 class UsageReport(Usage):
-    # None if the model has no known price
-    cost_usd: float | None
+    # Estimated cost in CHF, None if the model has no known price
+    cost_chf: float | None

@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     system_prompt: str = "You are a helpful assistant."
     # Per-model prices (USD per 1M tokens) merged over DEFAULT_PRICES, as JSON in .env
     llm_prices: dict[str, ModelPrice] = {}
+    # Fixed exchange rate for showing costs in CHF (OpenAI bills in USD); update occasionally
+    usd_to_chf: float = Field(default=0.80, gt=0)
 
     auth_enabled: bool = False
 

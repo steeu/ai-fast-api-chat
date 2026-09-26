@@ -21,6 +21,8 @@ Die OpenAI Responses API liefert **keine Kosten**, nur Token-Zahlen. Am Ende des
 
 Die Kosten müssen wir selbst aus Tokens × Preis berechnen.
 
+Angezeigt werden die Kosten in **CHF**: Die Preistabelle bleibt in USD, umgerechnet wird mit einem festen Kurs (`USD_TO_CHF`, Standard 0.80, per `.env` anpassbar).
+
 ### Preise (Stand 2026-09, [OpenAI-Doku](https://developers.openai.com/api/docs/models/gpt-5.5))
 
 | Modell | Input / 1 Mio. | Cached Input / 1 Mio. | Output / 1 Mio. |

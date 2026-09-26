@@ -6,8 +6,8 @@ export interface Usage {
   cached_tokens: number
   output_tokens: number
   reasoning_tokens: number
-  // Estimated, null if the model has no known price
-  cost_usd: number | null
+  // Estimated cost in CHF, null if the model has no known price
+  cost_chf: number | null
 }
 
 export interface ChatMessage {

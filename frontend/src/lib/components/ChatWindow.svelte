@@ -15,8 +15,8 @@
   const answersWithUsage = $derived(messages.filter((m) => m.usage))
   // Sum of the known costs; null (shown as "–") if no answer has a known price
   const totalCost = $derived(
-    answersWithUsage.some((m) => m.usage?.cost_usd != null)
-      ? answersWithUsage.reduce((sum, m) => sum + (m.usage?.cost_usd ?? 0), 0)
+    answersWithUsage.some((m) => m.usage?.cost_chf != null)
+      ? answersWithUsage.reduce((sum, m) => sum + (m.usage?.cost_chf ?? 0), 0)
       : null,
   )
 

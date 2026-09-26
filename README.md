@@ -68,6 +68,6 @@ Danach läuft die App auf http://localhost:8000. Das Image lässt sich direkt au
 ## Erweitern
 
 - **Neuer LLM-Anbieter:** Klasse mit `async def stream(messages, system_prompt)` in `providers/` anlegen und in `providers/factory.py` registrieren. Nach dem Text am Ende ein `Usage`-Objekt liefern, damit Tokens und Kosten angezeigt werden.
-- **Preise:** Die Kostenanzeige ist eine Schätzung aus Tokens × Preis. Die Preistabelle steht in `core/pricing.py` und lässt sich per `LLM_PRICES` in `.env` ergänzen oder überschreiben (siehe `.env.example`). Für unbekannte Modelle wird „–“ statt eines Betrags angezeigt.
+- **Preise:** Die Kostenanzeige ist eine Schätzung aus Tokens × Preis. Die Preistabelle steht in USD (wie bei OpenAI) in `core/pricing.py` und lässt sich per `LLM_PRICES` in `.env` ergänzen oder überschreiben (siehe `.env.example`). Angezeigt werden die Kosten in CHF, umgerechnet mit dem festen Kurs `USD_TO_CHF` (Standard 0.80, bei Bedarf in `.env` nachführen). Für unbekannte Modelle wird „–“ statt eines Betrags angezeigt.
 - **Token-Validierung:** `AUTH_ENABLED=true` setzen und in `core/security.py` beim `TODO` die JWT-Prüfung ergänzen (z.B. mit PyJWT + JWKS des Auth-Anbieters). Im Frontend den Token mit `setAuthToken()` aus `lib/api.ts` setzen.
 - **Neuer Endpunkt:** Router in `api/routers/` anlegen, Logik in einen Service in `services/` auslagern, Router in `main.py` einhängen.

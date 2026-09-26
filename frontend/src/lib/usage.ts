@@ -9,15 +9,15 @@ export function formatTokens(count: number): string {
   return tokens.format(count)
 }
 
-/** Estimated cost like "~0.02 $"; amounts below a cent keep two significant digits. */
-export function formatCost(usd: number | null): string {
-  if (usd === null) return '– $'
-  const amount = usd === 0 || usd >= 0.01 ? cents.format(usd) : small.format(usd)
-  return `~${amount} $`
+/** Estimated cost like "~0.02 CHF"; amounts below a Rappen keep two significant digits. */
+export function formatCost(chf: number | null): string {
+  if (chf === null) return '– CHF'
+  const amount = chf === 0 || chf >= 0.01 ? cents.format(chf) : small.format(chf)
+  return `~${amount} CHF`
 }
 
-/** Meta line under an answer, e.g. "gpt-5.5 · 1’000 → 500 Tokens · ~0.02 $". */
+/** Meta line under an answer, e.g. "gpt-5.5 · 1’000 → 500 Tokens · ~0.02 CHF". */
 export function formatUsage(usage: Usage): string {
   const counts = `${formatTokens(usage.input_tokens)} → ${formatTokens(usage.output_tokens)} Tokens`
-  return `${usage.model} · ${counts} · ${formatCost(usage.cost_usd)}`
+  return `${usage.model} · ${counts} · ${formatCost(usage.cost_chf)}`
 }

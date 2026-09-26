@@ -40,7 +40,7 @@ def test_usage_event_comes_before_done(client: TestClient) -> None:
     assert usage["model"] == "fake"
     assert usage["output_tokens"] == 3
     # The fake model has no price, so no cost is claimed
-    assert usage["cost_usd"] is None
+    assert usage["cost_chf"] is None
 
 
 def test_last_message_must_be_from_user(client: TestClient) -> None:
