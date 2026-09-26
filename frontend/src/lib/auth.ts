@@ -21,7 +21,8 @@ export async function initAuth(): Promise<boolean> {
   const config: AuthConfig = await response.json()
   if (!config.enabled) return true
 
-  const origin = window.location.origin + '/'
+  // Must match the redirect URIs registered in Zitadel exactly (no trailing slash)
+  const origin = window.location.origin
   manager = new UserManager({
     authority: config.issuer!,
     client_id: config.client_id!,

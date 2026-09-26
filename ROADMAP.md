@@ -77,7 +77,7 @@ Anfrage:  Bearer-Token → /api/chat/stream → Backend prüft Signatur (JWKS), 
 
 - **Projekt** anlegen, Rolle `chat-user` hinzufügen, „Rollen bei der Authentifizierung zusichern“ aktivieren (damit das Rollen-Claim im Token steht).
 - **Applikation** vom Typ „User Agent“ (Single Page App): PKCE, kein Client Secret, Auth Token Type **JWT**, Refresh Token aktiv.
-- **Redirect-URIs** und Post-Logout-URIs: `http://localhost:5173/` (Entwicklung, dafür „Development Mode“ für `http` einschalten), `http://localhost:8000/` (Docker), später die Railway-URL (Punkt 3).
+- **Redirect-URIs** und Post-Logout-URIs: `http://localhost:5173` (Entwicklung, dafür „Development Mode“ für `http` einschalten), `http://localhost:8000` (Docker), jeweils ohne `/` am Ende, später die Railway-URL (Punkt 3).
 - **Berechtigung:** Den gewünschten Benutzern die Rolle `chat-user` erteilen.
 - **Token-Lebensdauer:** Access Token kurz halten (z.B. 1 h) und per Refresh Token erneuern, weil ein Token nach dem Abmelden bis zum Ablauf gültig bleibt.
 

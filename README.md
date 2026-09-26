@@ -53,7 +53,7 @@ Einrichtung in der Zitadel-Console:
 
 1. **Projekt** anlegen, Rolle `chat-user` hinzufügen und „Assert Roles on Authentication“ aktivieren.
 2. Im Projekt eine **Applikation** vom Typ „User Agent“ anlegen: Authentifizierung „PKCE“, in den Token-Einstellungen **Auth Token Type „JWT“** und **Refresh Token** aktivieren.
-3. **Redirect-URIs** und **Post-Logout-URIs**: `http://localhost:5173/` und `http://localhost:8000/` (dafür „Development Mode“ einschalten, weil `http`), später die Produktions-URL.
+3. **Redirect-URIs** und **Post-Logout-URIs**: `http://localhost:5173` und `http://localhost:8000` – exakt so, **ohne** `/` am Ende, Zitadel vergleicht Zeichen für Zeichen (dafür „Development Mode“ einschalten, weil `http`). Später die Produktions-URL.
 4. Den gewünschten Benutzern unter **Authorizations** die Rolle `chat-user` geben.
 5. Empfohlen: Lebensdauer des Access Tokens kurz halten (z.B. 1 h), die Erneuerung läuft per Refresh Token.
 
