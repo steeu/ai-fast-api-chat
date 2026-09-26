@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routers import chat, health
+from app.api.routers import auth, chat, health
 from app.core.config import get_settings
 
 # Built frontend (copied here by the Dockerfile). Missing during local development.
@@ -14,6 +14,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title=get_settings().app_name)
 
     app.include_router(health.router, prefix="/api")
+    app.include_router(auth.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
 
     if STATIC_DIR.is_dir():

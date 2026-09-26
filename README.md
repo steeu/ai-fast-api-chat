@@ -9,7 +9,7 @@ Antworten werden per Server-Sent Events live gestreamt. Der LLM-Anbieter ist aus
 backend/app/
 ├── main.py              # App-Factory, Router, Auslieferung des gebauten Frontends
 ├── core/config.py       # Einstellungen aus Umgebungsvariablen / .env
-├── core/security.py     # Token-Validierung (Dependency get_current_user)
+├── core/security.py     # Prüfung der Zitadel-Tokens (Dependency get_current_user)
 ├── api/deps.py          # Dependency-Wiring (Provider, Services)
 ├── api/routers/         # "Controller": dünne HTTP-Schicht
 ├── schemas/             # Pydantic-Modelle für Requests/Responses
@@ -17,6 +17,7 @@ backend/app/
 └── providers/           # LLM-Anbieter hinter einem gemeinsamen Interface
 frontend/src/
 ├── lib/api.ts           # API-Client inkl. SSE-Parser
+├── lib/auth.ts          # Login mit Zitadel (oidc-client-ts)
 └── lib/components/      # Chat-UI
 ```
 
@@ -44,6 +45,29 @@ cd frontend && npm run dev
 
 Ohne API-Key testen: in `.env` den Wert `LLM_PROVIDER=fake` setzen. Die Antwort ist dann ein Echo.
 
+## Login mit Zitadel
+
+Ohne `AUTH_ENABLED=true` ist die App offen (praktisch für die Entwicklung). Mit Login darf nur chatten, wer in Zitadel die Projektrolle `chat-user` hat. Die App leitet ohne Session direkt zur Zitadel-Loginseite weiter; im Header stehen danach Name und „Abmelden“.
+
+Einrichtung in der Zitadel-Console:
+
+1. **Projekt** anlegen, Rolle `chat-user` hinzufügen und „Assert Roles on Authentication“ aktivieren.
+2. Im Projekt eine **Applikation** vom Typ „User Agent“ anlegen: Authentifizierung „PKCE“, in den Token-Einstellungen **Auth Token Type „JWT“** und **Refresh Token** aktivieren.
+3. **Redirect-URIs** und **Post-Logout-URIs**: `http://localhost:5173/` und `http://localhost:8000/` (dafür „Development Mode“ einschalten, weil `http`), später die Produktions-URL.
+4. Den gewünschten Benutzern unter **Authorizations** die Rolle `chat-user` geben.
+5. Empfohlen: Lebensdauer des Access Tokens kurz halten (z.B. 1 h), die Erneuerung läuft per Refresh Token.
+
+Dann in `.env` setzen:
+
+```bash
+AUTH_ENABLED=true
+ZITADEL_ISSUER=https://<instanz>.zitadel.cloud
+ZITADEL_CLIENT_ID=<Client-ID der App>
+ZITADEL_PROJECT_ID=<Resource-ID des Projekts>
+```
+
+Das Backend prüft jedes Token lokal mit den öffentlichen Schlüsseln von Zitadel (Signatur, Issuer, Audience, Ablauf) und die Rolle. Ungültiges Token → 401 (die App leitet neu zur Anmeldung), fehlende Rolle → 403 („Kein Zugriff“). Das Frontend holt die Zitadel-Daten zur Laufzeit von `/api/auth/config`, dasselbe Docker-Image funktioniert also in jeder Umgebung.
+
 ## Tests & Linting
 
 ```bash
@@ -69,5 +93,5 @@ Danach läuft die App auf http://localhost:8000. Das Image lässt sich direkt au
 
 - **Neuer LLM-Anbieter:** Klasse mit `async def stream(messages, system_prompt)` in `providers/` anlegen und in `providers/factory.py` registrieren. Nach dem Text am Ende ein `Usage`-Objekt liefern, damit Tokens und Kosten angezeigt werden.
 - **Preise:** Die Kostenanzeige ist eine Schätzung aus Tokens × Preis. Die Preistabelle steht in USD (wie bei OpenAI) in `core/pricing.py` und lässt sich per `LLM_PRICES` in `.env` ergänzen oder überschreiben (siehe `.env.example`). Angezeigt werden die Kosten in CHF, umgerechnet mit dem festen Kurs `USD_TO_CHF` (Standard 0.80, bei Bedarf in `.env` nachführen). Für unbekannte Modelle wird „–“ statt eines Betrags angezeigt.
-- **Token-Validierung:** `AUTH_ENABLED=true` setzen und in `core/security.py` beim `TODO` die JWT-Prüfung ergänzen (z.B. mit PyJWT + JWKS des Auth-Anbieters). Im Frontend den Token mit `setAuthToken()` aus `lib/api.ts` setzen.
+- **Benutzer im Code:** `CurrentUser` aus `core/security.py` als Parameter eines Endpunkts liefert `id` (Zitadel-`sub`) und `roles`; ohne Login ist es ein anonymer Benutzer.
 - **Neuer Endpunkt:** Router in `api/routers/` anlegen, Logik in einen Service in `services/` auslagern, Router in `main.py` einhängen.

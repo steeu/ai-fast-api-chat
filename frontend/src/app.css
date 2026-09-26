@@ -58,3 +58,14 @@ body {
     transition: none !important;
   }
 }
+
+/* Shown by main.ts if the login can't be completed */
+.startup-error {
+  margin: 20vh auto 0;
+  padding: 0 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+.startup-error a {
+  color: var(--accent);
+}

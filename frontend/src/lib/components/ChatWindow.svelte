@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { streamChat, type ChatMessage } from '../api'
+  import { ApiError, streamChat, type ChatMessage } from '../api'
+  import { currentUserName, isAuthEnabled, signIn, signOut } from '../auth'
   import EmptyState from './EmptyState.svelte'
   import MessageInput from './MessageInput.svelte'
   import MessageList from './MessageList.svelte'
@@ -11,6 +12,7 @@
   let loading = $state(false)
   let error = $state<string | null>(null)
   let controller: AbortController | null = null
+  const userName = currentUserName()
 
   const answersWithUsage = $derived(messages.filter((m) => m.usage))
   // Sum of the known costs; null (shown as "–") if no answer has a known price
@@ -51,7 +53,12 @@
         signal: controller.signal,
       })
     } catch (e) {
-      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+      if (e instanceof ApiError && e.status === 401 && isAuthEnabled()) {
+        // Session expired and couldn't be renewed
+        await signIn()
+      } else if (e instanceof ApiError && e.status === 403) {
+        error = 'Kein Zugriff. Bitte beim Administrator die Freigabe anfragen.'
+      } else if (!(e instanceof DOMException && e.name === 'AbortError')) {
         error = e instanceof Error ? e.message : String(e)
       }
     } finally {
@@ -85,7 +92,7 @@
         <span class="total" title="Geschätzte Kosten dieses Chats">{formatCost(totalCost)}</span>
       {/if}
       {#if messages.length > 0}
-        <button type="button" class="new-chat" onclick={newChat}>
+        <button type="button" class="pill new-chat" onclick={newChat}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14" fill="none" stroke-width="2" stroke-linecap="round" />
           </svg>
@@ -93,6 +100,10 @@
         </button>
       {/if}
       <ThemeToggle />
+      {#if isAuthEnabled()}
+        {#if userName}<span class="user">{userName}</span>{/if}
+        <button type="button" class="pill" onclick={signOut}>Abmelden</button>
+      {/if}
     </div>
   </header>
 
@@ -176,7 +187,20 @@
     font-size: 0.85rem;
     font-variant-numeric: tabular-nums;
   }
-  .new-chat {
+  .user {
+    max-width: 12rem;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (max-width: 480px) {
+    .user {
+      display: none;
+    }
+  }
+  .pill {
     display: flex;
     align-items: center;
     gap: 0.35rem;
@@ -189,7 +213,7 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
-  .new-chat:hover {
+  .pill:hover {
     background: var(--surface);
   }
   .new-chat svg {

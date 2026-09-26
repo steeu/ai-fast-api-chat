@@ -41,7 +41,7 @@ Layered, request flows top to bottom:
 - `app/services/chat_service.py` — business logic, independent of HTTP and provider. Raises `ValueError` for invalid conversations. Turns the provider's `Usage` into a `UsageReport` with `cost_chf` (estimated in USD via `core/pricing.py`, converted with the fixed `USD_TO_CHF` rate; `None` for models without a known price).
 - `app/providers/` — `LLMProvider` is a `Protocol` with `stream(messages, system_prompt) -> AsyncIterator[str | Usage]` (text deltas, then at most one `Usage` with token counts). `factory.create_provider` selects by `settings.llm_provider`. `OpenAIProvider` uses the **Responses API** (`client.responses.create(..., stream=True)`), not Chat Completions.
 - `app/schemas/chat.py` — Pydantic request models (roles only `user`/`assistant`; system prompt is injected server-side from settings).
-- `app/core/config.py` — `Settings` (pydantic-settings) via cached `get_settings()`; `model_prices` merges `LLM_PRICES` (JSON in `.env`) over `DEFAULT_PRICES` from `core/pricing.py`. `core/security.py` — Bearer auth; with `AUTH_ENABLED=false` every request is `ANONYMOUS_USER`. JWT validation is a **TODO stub**: with auth enabled, any Bearer token is accepted.
+- `app/core/config.py` — `Settings` (pydantic-settings) via cached `get_settings()`; `model_prices` merges `LLM_PRICES` (JSON in `.env`) over `DEFAULT_PRICES` from `core/pricing.py`. `core/security.py` — Zitadel auth; with `AUTH_ENABLED=false` every request is `ANONYMOUS_USER`. With auth enabled, the Bearer token must be a Zitadel JWT access token: checked locally via JWKS (`get_jwks_client`, cached `PyJWKClient`) for signature (RS256), `iss`, `aud` (project id) and `exp`; invalid → 401, missing `AUTH_REQUIRED_ROLE` in the roles claim → 403, JWKS unreachable → 503. `Settings` refuses to start with `AUTH_ENABLED=true` but missing `ZITADEL_*` values. `routers/auth.py` serves the public `GET /api/auth/config` for the frontend.
 
 ### SSE contract (backend ↔ frontend)
 
@@ -56,12 +56,13 @@ If you change event names or encoding, update both `routers/chat.py` and `fronte
 
 ## Tests
 
-`tests/conftest.py` builds the app with `create_app()` and uses `dependency_overrides` to force `Settings(_env_file=None, llm_provider="fake")` and `FakeProvider(delay=0)` — tests never read the real `.env` or call OpenAI. Tests that exercise the real factory must clear `deps._cached_provider.cache_clear()` before and after (see `test_missing_api_key_returns_503`).
+`tests/conftest.py` builds the app with `create_app()` and uses `dependency_overrides` to force `Settings(_env_file=None, llm_provider="fake")` and `FakeProvider(delay=0)` — tests never read the real `.env` or call OpenAI. Tests that exercise the real factory must clear `deps._cached_provider.cache_clear()` before and after (see `test_missing_api_key_returns_503`). Auth tests (`tests/test_auth.py`) sign tokens with a generated RSA key and override `get_jwks_client` with a fake — no network calls to Zitadel.
 
 ## Frontend
 
 - Svelte 5 runes (`$state`, `$effect`, `$props`); no router, no store library. `App.svelte` → `ChatWindow.svelte` holds all chat state.
-- `lib/api.ts` — `streamChat()` uses `fetch` + manual SSE parsing (EventSource can't POST). `setAuthToken()` is the hook for future auth. Aborting via `AbortController` implements the Stop button.
+- `lib/api.ts` — `streamChat()` uses `fetch` + manual SSE parsing (EventSource can't POST). Pre-stream HTTP errors are thrown as `ApiError` (with `status`). `setAuthToken()` is called by `lib/auth.ts`.
+- `lib/auth.ts` — Zitadel login with `oidc-client-ts` (Authorization Code + PKCE). `initAuth()` runs in `main.ts` **before mounting**: loads `/api/auth/config`, handles the redirect callback, and redirects to Zitadel without a session. Token renewal via refresh token updates `setAuthToken()`. `ChatWindow` redirects to login on 401 and shows a German message on 403. Aborting via `AbortController` implements the Stop button.
 - `lib/markdown.ts` — assistant messages are rendered with `marked` and **must** be sanitized with DOMPurify before `{@html}` (done in `renderMarkdown`). Never render model output through `{@html}` without it.
 - Theming: CSS custom properties in `app.css`; dark is default, light via `data-theme="light"` on `<html>`, persisted in `localStorage` (inline script in `index.html` prevents a flash).
 

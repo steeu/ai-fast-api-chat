@@ -22,7 +22,17 @@ export interface StreamHandlers {
   signal?: AbortSignal
 }
 
-// Later: set this after login (e.g. from an auth provider), it is sent as Bearer token
+/** HTTP error before streaming started; status lets the UI react to 401/403. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+  }
+}
+
+// Set by lib/auth.ts after login and on every token renewal, sent as Bearer token
 let authToken: string | null = null
 
 export function setAuthToken(token: string | null) {
@@ -51,7 +61,7 @@ export async function streamChat(
   if (!response.ok || !response.body) {
     const body = await response.json().catch(() => null)
     const detail = typeof body?.detail === 'string' ? body.detail : ''
-    throw new Error(detail || `Request failed (${response.status})`)
+    throw new ApiError(detail || `Request failed (${response.status})`, response.status)
   }
 
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()

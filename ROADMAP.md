@@ -4,10 +4,10 @@
 
 | Nr. | Punkt | Status | Beschreibung |
 |---|---|---|---|
-| 2 | Login mit Zitadel | Offen | Anmeldung über Zitadel Cloud, nur Benutzer mit Projektrolle dürfen chatten; ersetzt den Auth-Platzhalter. |
 | 3 | Deployment auf Railway | Offen | Docker-Image automatisch bei jedem Push auf `main` auf Railway deployen, sobald die Checks in GitHub Actions grün sind. |
 | 4 | RAG: Fragen an eigene Dokumente | Offen | Word-, Excel- und PDF-Dateien aus einem Ordner indexieren und per Schalter im Chat mit Quellenangaben befragen. |
 | 1 | Kosten- und Token-Anzeige | ✅ Erledigt | Modell, Input-/Output-Tokens und geschätzte Kosten unter jeder Antwort, Summe pro Chat im Header. |
+| 2 | Login mit Zitadel | ✅ Erledigt | Anmeldung über Zitadel Cloud, nur Benutzer mit Projektrolle dürfen chatten; ersetzt den Auth-Platzhalter. |
 
 ## 1. Kosten- und Token-Anzeige ✅ umgesetzt
 
@@ -44,7 +44,7 @@ Beispiel: 1’000 Input- + 500 Output-Tokens ≈ 0.005 $ + 0.015 $ = **0.02 $**.
 - **Frontend:** `streamChat()` bekommt einen `onUsage`-Handler; `ChatMessage` im Frontend erhält ein optionales `usage`-Feld; `MessageList.svelte` zeigt eine dezente Meta-Zeile, z.B. `gpt-5.5 · 1’000 → 500 Tokens · ~0.02 $`. Optional: Summe für den ganzen Chat im Header.
 - **Tests:** Usage-Event kommt vor `done`; Kostenberechnung inkl. Cached Tokens und unbekanntem Modell.
 
-## 2. Login mit Zitadel
+## 2. Login mit Zitadel ✅ umgesetzt
 
 Nur angemeldete Benutzer mit der passenden Projektrolle dürfen chatten. Der Login läuft über Zitadel Cloud und ersetzt den heutigen Platzhalter in `core/security.py`, der mit `AUTH_ENABLED=true` jeden Bearer-Token akzeptiert. Weil jede Anfrage OpenAI-Kosten verursacht und mit RAG (Punkt 4) Dokumenteninhalte sichtbar werden, kommt der Login vor RAG.
 
