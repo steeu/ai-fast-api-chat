@@ -10,6 +10,7 @@ interface AuthConfig {
 
 let manager: UserManager | null = null
 let userName: string | null = null
+let firstName: string | null = null
 
 /**
  * Runs before the app is mounted. Returns true when the app may start, false when the browser
@@ -58,6 +59,13 @@ function useUser(user: User) {
   setAuthToken(user.access_token)
   const profile = user.profile
   userName = profile.name ?? profile.preferred_username ?? profile.email ?? null
+  // For the greeting; login names or emails would read oddly, so only real names are used
+  firstName = profile.given_name ?? profile.name?.split(' ')[0] ?? null
+}
+
+/** First name for a personal greeting, null without login or name. */
+export function currentFirstName(): string | null {
+  return firstName
 }
 
 /** Display name of the signed-in user, null without login. */

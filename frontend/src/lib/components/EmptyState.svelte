@@ -1,5 +1,9 @@
 <script lang="ts">
+  import { currentFirstName } from '../auth'
+
   let { onPick }: { onPick: (text: string) => void } = $props()
+
+  const firstName = currentFirstName()
 
   const suggestions = [
     'Erkläre mir FastAPI in drei Sätzen',
@@ -11,7 +15,7 @@
 
 <div class="empty">
   <div class="logo" aria-hidden="true"></div>
-  <h2>Wie kann ich dir helfen?</h2>
+  <h2>{firstName ? `Wie kann ich dir helfen, ${firstName}?` : 'Wie kann ich dir helfen?'}</h2>
   <div class="suggestions">
     {#each suggestions as suggestion (suggestion)}
       <button type="button" onclick={() => onPick(suggestion)}>{suggestion}</button>
