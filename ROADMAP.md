@@ -5,6 +5,7 @@
 | Nr. | Punkt | Status | Beschreibung |
 |---|---|---|---|
 | 2 | RAG: Fragen an eigene Dokumente | Offen | Word-, Excel- und PDF-Dateien aus einem Ordner indexieren und per Schalter im Chat mit Quellenangaben befragen. |
+| 3 | Login mit Zitadel | Offen | Anmeldung über Zitadel Cloud, nur Benutzer mit Projektrolle dürfen chatten; ersetzt den Auth-Platzhalter. |
 | 1 | Kosten- und Token-Anzeige | ✅ Erledigt | Modell, Input-/Output-Tokens und geschätzte Kosten unter jeder Antwort, Summe pro Chat im Header. |
 
 ## 1. Kosten- und Token-Anzeige ✅ umgesetzt
@@ -110,7 +111,7 @@ Alte Formate (`.doc`, `.xls`) werden übersprungen und im Status gemeldet. Weite
 - Der Ordner ist nur serverseitig konfiguriert; der Client schickt nie Pfade. Das UI zeigt nur Dateinamen, keine vollständigen Pfade.
 - Dokumenteninhalt ist ungeprüfte Eingabe: Text in Dokumenten kann versuchen, dem Modell Anweisungen zu geben (Prompt Injection). Quellen deshalb klar als Daten abgrenzen, nicht als Anweisungen.
 - Textabschnitte der Dokumente werden zum Einbetten und bei Fragen an OpenAI gesendet – vertrauliche Dokumente entsprechend auswählen.
-- Solange die Authentifizierung ein Platzhalter ist, sieht jeder mit Zugriff auf die App die Inhalte aller indexierten Dokumente.
+- Solange die Authentifizierung ein Platzhalter ist, sieht jeder mit Zugriff auf die App die Inhalte aller indexierten Dokumente (siehe Punkt 3).
 
 ### Etappen
 
@@ -122,3 +123,72 @@ Alte Formate (`.doc`, `.xls`) werden übersprungen und im Status gemeldet. Weite
 ### Tests
 
 Kleine Beispieldateien (je eine `.docx`, `.xlsx`, `.pdf`) als Test-Fixtures; Fake-Embeddings für deterministische Suche. Prüfen: Loader liefern Text + korrekte Seiten/Blätter, geänderte Dateien werden neu indexiert und gelöschte entfernt, `sources` kommt vor den Tokens, ohne `DOCS_DIR` ist RAG sauber deaktiviert.
+
+## 3. Login mit Zitadel
+
+Nur angemeldete Benutzer mit der passenden Projektrolle dürfen chatten. Der Login läuft über Zitadel Cloud und ersetzt den heutigen Platzhalter in `core/security.py`, der mit `AUTH_ENABLED=true` jeden Bearer-Token akzeptiert. Weil jede Anfrage OpenAI-Kosten verursacht und mit Punkt 2 Dokumenteninhalte sichtbar werden, sollte das vor oder spätestens mit RAG umgesetzt werden.
+
+### Passt das zur Architektur?
+
+Ja, die Anwendung ist darauf vorbereitet:
+
+- **Backend:** `get_current_user` hängt bereits am ganzen Chat-Router; es fehlt nur die echte Token-Prüfung beim `TODO`.
+- **Frontend:** `setAuthToken()` in `lib/api.ts` setzt den Bearer-Header. Weil der Stream über `fetch` statt `EventSource` läuft, geht der Header problemlos mit.
+- **Docker:** Frontend und API laufen auf derselben Adresse – eine Redirect-URI pro Umgebung, kein CORS.
+
+### Entscheidungen
+
+| Frage | Entscheidung | Grund |
+|---|---|---|
+| Welche Instanz? | Zitadel Cloud | Kein eigener Betrieb (Datenbank, Updates); im Code ändert sich nur die Issuer-URL, ein Wechsel auf self-hosted bleibt möglich |
+| Wie prüft das Backend Tokens? | Access Token als **JWT**, lokal geprüft mit den öffentlichen Schlüsseln (JWKS) | Kein Aufruf an Zitadel pro Anfrage; Introspection bräuchte einen Backend-Schlüssel und einen Netzwerkaufruf pro Request |
+| Wer darf chatten? | Nur Benutzer mit Projektrolle `chat-user` | Kontrolle darüber, wer Kosten verursacht und (mit RAG) Dokumente sieht |
+| Login-Ablauf | Ohne Session direkt zur Zitadel-Loginseite weiterleiten | Einfachster und sicherster Weg, keine eigene Loginseite |
+| Woher kennt das Frontend die Zitadel-Daten? | Öffentlicher Endpunkt `GET /api/auth/config` | Ein Docker-Image für alle Umgebungen; Build-Variablen (`VITE_…`) würden die Werte ins Image brennen |
+
+### Ablauf
+
+```
+Login:    Browser → Zitadel-Loginseite (Authorization Code + PKCE) → Access Token (JWT) im Browser
+Anfrage:  Bearer-Token → /api/chat/stream → Backend prüft Signatur (JWKS), iss, aud, exp und Rolle
+```
+
+### Einrichtung in Zitadel (Console)
+
+- **Projekt** anlegen, Rolle `chat-user` hinzufügen, „Rollen bei der Authentifizierung zusichern“ aktivieren (damit das Rollen-Claim im Token steht).
+- **Applikation** vom Typ „User Agent“ (Single Page App): PKCE, kein Client Secret, Auth Token Type **JWT**, Refresh Token aktiv.
+- **Redirect-URIs** und Post-Logout-URIs: `http://localhost:5173/` (Entwicklung, dafür „Development Mode“ für `http` einschalten), `http://localhost:8000/` (Docker), später die Produktions-URL.
+- **Berechtigung:** Den gewünschten Benutzern die Rolle `chat-user` erteilen.
+- **Token-Lebensdauer:** Access Token kurz halten (z.B. 1 h) und per Refresh Token erneuern, weil ein Token nach dem Abmelden bis zum Ablauf gültig bleibt.
+
+### Umsetzung
+
+**Konfiguration** (`core/config.py`, `.env.example`):
+`AUTH_ENABLED=true`, `ZITADEL_ISSUER` (z.B. `https://<instanz>.zitadel.cloud`), `ZITADEL_CLIENT_ID` (für das Frontend), `ZITADEL_PROJECT_ID` (Audience und Rollen-Claim), `AUTH_REQUIRED_ROLE=chat-user`. Mit `AUTH_ENABLED=true` und fehlenden Werten startet das Backend mit klarer Fehlermeldung statt still unsicher.
+
+**Backend:**
+- `core/security.py`: Token mit `PyJWT[crypto]` prüfen; Schlüssel über `PyJWKClient("<issuer>/oauth/v2/keys")` laden und cachen (bei unbekannter `kid` neu laden, Schlüsselrotation). Geprüft werden Signatur (RS256), `iss`, `aud` (muss die Projekt-ID enthalten) und `exp`.
+- Rolle aus dem Claim `urn:zitadel:iam:org:project:roles` lesen. Ungültiges/abgelaufenes Token → **401**, fehlende Rolle → **403**.
+- `User` erhält `id` (`sub`) und die Rollen; mit `AUTH_ENABLED=false` bleibt alles wie heute (`ANONYMOUS_USER`).
+- Neuer Router `routers/auth.py` mit `GET /api/auth/config` (öffentlich): `enabled`, `issuer`, `client_id`, `project_id`. `/api/health` bleibt ebenfalls öffentlich.
+
+**Frontend:**
+- `oidc-client-ts` mit `UserManager` (Authorization Code + PKCE ist Standard). Scopes: `openid profile email offline_access urn:zitadel:iam:org:project:id:<projectId>:aud`.
+- Neues `lib/auth.ts`, aufgerufen in `main.ts` vor dem Mounten: Config laden; ist Auth aus, normal starten. Sonst Rückkehr von Zitadel verarbeiten (`?code=…`, danach URL bereinigen), vorhandene Session laden oder zu Zitadel weiterleiten. Token per `setAuthToken()` setzen und bei jeder Erneuerung aktualisieren (`automaticSilentRenew` mit Refresh Token).
+- Header: Benutzername und Button „Abmelden“ (`signoutRedirect`).
+- Fehler: 401 → erneut anmelden; 403 → Meldung „Kein Zugriff. Bitte beim Administrator die Freigabe anfragen.“ statt leerem Chat.
+
+**Tests:** Im Test ein eigenes RSA-Schlüsselpaar erzeugen, Tokens damit signieren und den JWKS-Client ersetzen. Prüfen: gültiges Token mit Rolle → 200; abgelaufen, falsche Audience, falscher Issuer oder falsche Signatur → 401; ohne Rolle → 403; `AUTH_ENABLED=false` → anonym; `/api/auth/config` ohne Token erreichbar.
+
+### Sicherheit
+
+- Öffentlicher Client ohne Secret im Browser (PKCE); das Backend vertraut nur signierten Tokens von Zitadel.
+- Rollen prüft ausschliesslich das Backend – Ausblenden im Frontend ist nur Komfort.
+- `oidc-client-ts` speichert Tokens standardmässig im `sessionStorage`. Ein XSS-Fehler könnte sie auslesen; deshalb bleibt das Sanitizing der Modellantworten mit DOMPurify zwingend.
+- Tokens nie loggen.
+
+### Etappen
+
+1. **Zitadel einrichten + Backend-Prüfung** – Projekt, Rolle, App; JWT-Prüfung und Rollencheck, testbar mit einem Token aus der Zitadel-Console bzw. per `curl`.
+2. **Frontend-Login** – `auth.ts`, Weiterleitung, Token-Erneuerung, Abmelden.
+3. **Feinschliff** – 403-Meldung, Anzeige des Benutzers, Doku in README und CLAUDE.md.
