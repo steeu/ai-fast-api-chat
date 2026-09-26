@@ -13,7 +13,11 @@ def create_provider(settings: Settings) -> LLMProvider:
         case "openai":
             if not settings.openai_api_key:
                 raise ProviderConfigError("OPENAI_API_KEY is not set.")
-            return OpenAIProvider(api_key=settings.openai_api_key, model=settings.llm_model)
+            return OpenAIProvider(
+                api_key=settings.openai_api_key,
+                model=settings.llm_model,
+                temperature=settings.llm_temperature,
+            )
         case "fake":
             return FakeProvider()
     raise ValueError(f"Unknown LLM provider: {settings.llm_provider}")

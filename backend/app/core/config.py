@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +18,8 @@ class Settings(BaseSettings):
 
     llm_provider: Literal["openai", "fake"] = "openai"
     llm_model: str = "gpt-5.5"
+    # None = provider default; not every model accepts a temperature
+    llm_temperature: float | None = Field(default=None, ge=0, le=2)
     openai_api_key: str | None = None
     system_prompt: str = "You are a helpful assistant."
 
