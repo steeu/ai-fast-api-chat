@@ -67,6 +67,7 @@ If you change event names or encoding, update both `routers/chat.py` and `fronte
 
 ## Workflow
 
+- **Grill before building.** For every request that changes the repo (new feature, change, refactor, plan/roadmap item), first check whether requirements are clear before writing code. If anything relevant is unclear — scope, behavior, UI placement, naming, edge cases, trade-offs between approaches — ask targeted questions first (prefer the AskUserQuestion tool; one question per decision, recommended option first with a short reason). Resolve decisions you can answer from the code, ROADMAP.md or sensible defaults yourself instead of asking. Don't grill simple questions, confirmations ("yes") or trivial, unambiguous edits. Ask in German, matching how the user writes.
 - After completing any change to the repository, always ask the user whether the change should be committed, and include the ready-to-use commit message in that same question (imperative, English, matching the existing history, e.g. "Add ...", "Fix ..."). Do not commit without an explicit yes; on yes, commit with exactly that message unless the user edits it.
 
 ## Conventions
