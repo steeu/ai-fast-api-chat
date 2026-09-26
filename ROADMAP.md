@@ -161,9 +161,9 @@ Die App läuft öffentlich auf Railway. Grundlage ist das bestehende `Dockerfile
 
 ### Etappen
 
-1. **Image + CI** – `PORT`, Proxy-Einstellungen, `railway.toml`, GitHub-Actions-Workflow; lokal mit `docker run -e PORT=…` prüfen.
+1. **Image + CI** – `PORT`, Proxy-Einstellungen, `railway.toml`, GitHub-Actions-Workflow; lokal mit `docker run -e PORT=…` prüfen. ✅ umgesetzt
 2. **Railway einrichten** – Service, Region, Variablen, Domain, Zitadel-Redirect-URIs; erstes Deployment inkl. Login und Streaming testen.
-3. **Feinschliff** – README, optional API-Doku in Produktion abschalten.
+3. **Feinschliff** – README ✅; API-Doku ist per `API_DOCS_ENABLED` standardmässig aus ✅.
 
 ## 4. RAG: Fragen an eigene Dokumente
 

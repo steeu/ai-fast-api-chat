@@ -30,6 +30,8 @@ class Settings(BaseSettings):
         return init_settings, dotenv_settings, env_settings, file_secret_settings
 
     app_name: str = "AI"
+    # Swagger UI (/docs), ReDoc and /openapi.json; off by default so production doesn't expose them
+    api_docs_enabled: bool = False
 
     llm_provider: Literal["openai", "fake"] = "openai"
     llm_model: str = "gpt-5.5"

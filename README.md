@@ -42,7 +42,7 @@ Backend und Frontend zusammen starten (Ctrl+C beendet beide), dann http://localh
 Oder einzeln in zwei Terminals:
 
 ```bash
-# Backend auf http://localhost:8000 (API-Doku unter /docs)
+# Backend auf http://localhost:8000 (API-Doku unter /docs, wenn API_DOCS_ENABLED=true)
 cd backend && uv run fastapi dev app/main.py
 
 # Frontend auf http://localhost:5173 (leitet /api an das Backend weiter)
@@ -93,7 +93,30 @@ docker build -t ai-chat .
 docker run -p 8000:8000 --env-file .env ai-chat
 ```
 
-Danach läuft die App auf http://localhost:8000. Das Image lässt sich direkt auf Fly.io, Render, Railway o.ä. deployen.
+Danach läuft die App auf http://localhost:8000. Den Port gibt die Variable `PORT` vor (Standard 8000), wie es Railway erwartet.
+
+## Deployment auf Railway
+
+Railway baut das `Dockerfile` bei jedem Push auf `main` und stellt die App unter einer Railway-Subdomain mit HTTPS bereit. Build, Healthcheck (`/api/health`) und Neustart-Regel stehen in `railway.toml`. GitHub Actions (`.github/workflows/ci.yml`) prüft bei jedem Push Backend (Ruff, Pytest) und Frontend (`npm run check`, Build).
+
+Einmalige Einrichtung:
+
+1. Auf [railway.com](https://railway.com) ein Projekt anlegen, **Deploy from GitHub repo** wählen, das Repo freigeben, Branch `main`.
+2. Im Service unter **Settings**: Region **EU West** wählen und **Wait for CI** aktivieren, damit nur Commits mit grünen Checks deployt werden.
+3. Unter **Variables** setzen (die `.env` kommt nicht ins Image):
+   ```bash
+   OPENAI_API_KEY=...
+   LLM_MODEL=gpt-5.5
+   AUTH_ENABLED=true
+   ZITADEL_ISSUER=https://<instanz>.zitadel.cloud
+   ZITADEL_CLIENT_ID=<Client-ID der App>
+   ZITADEL_PROJECT_ID=<Resource-ID des Projekts>
+   ```
+   Optional `SYSTEM_PROMPT`, `USD_TO_CHF`, `LLM_PRICES`. `PORT` setzt Railway selbst.
+4. Unter **Settings → Networking** eine Domain generieren (z.B. `ai-chat.up.railway.app`).
+5. In Zitadel `https://<domain>` (ohne `/` am Ende) als Redirect- und Post-Logout-URI der App eintragen.
+
+Wichtig: Nie mit `AUTH_ENABLED=false` deployen, sonst kann jeder mit der URL auf deine Kosten chatten. Die API-Doku (`/docs`, `/openapi.json`) ist standardmässig aus; lokal lässt sie sich mit `API_DOCS_ENABLED=true` einschalten.
 
 ## Erweitern
 

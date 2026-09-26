@@ -1,0 +1,13 @@
+# Railway config as code (https://docs.railway.com/reference/config-as-code).
+# Variables (OPENAI_API_KEY, ZITADEL_*, ...) are set in the Railway service, not here.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Railway switches traffic to a new deployment only after this returns 200
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

@@ -10,7 +10,7 @@ Backend (Python 3.12, managed with `uv`; run from `backend/`):
 
 ```bash
 uv sync                              # install deps
-uv run fastapi dev app/main.py       # dev server on :8000, API docs at /docs
+uv run fastapi dev app/main.py       # dev server on :8000, API docs at /docs if API_DOCS_ENABLED=true
 uv run pytest                        # all tests
 uv run pytest tests/test_chat.py::test_stream_returns_tokens_then_done   # single test
 uv run ruff check . && uv run ruff format .
@@ -31,13 +31,15 @@ Docker (single image: built frontend served by FastAPI from `/app/static`):
 docker build -t ai-chat . && docker run -p 8000:8000 --env-file .env ai-chat
 ```
 
+The container listens on `$PORT` (default 8000). Deployment: Railway builds the `Dockerfile` on every push to `main` (`railway.toml`: healthcheck `/api/health`, restart on failure; "Wait for CI" waits for `.github/workflows/ci.yml`, which runs ruff, pytest, `npm run check` and `npm run build`). Production variables live in the Railway service, not in `.env`.
+
 Configuration comes from `.env` (see `.env.example`); `Settings` reads `.env` or `../.env`, so the root `.env` works when running from `backend/`. `.env` takes precedence over exported environment variables (`settings_customise_sources`); env vars only fill values missing in `.env` (Docker gets them via `--env-file`). Set `LLM_PROVIDER=fake` to run without an API key.
 
 ## Backend architecture
 
 Layered, request flows top to bottom:
 
-- `app/main.py` — `create_app()` factory; mounts routers under `/api`; mounts `static/` at `/` only if it exists (i.e. in Docker).
+- `app/main.py` — `create_app(settings=None)` factory; mounts routers under `/api`; mounts `static/` at `/` only if it exists (i.e. in Docker). `/docs`, `/redoc` and `/openapi.json` exist only with `API_DOCS_ENABLED=true` (default false).
 - `app/api/routers/` — thin HTTP layer. `chat.py` is `POST /api/chat/stream`; the whole chat router requires `get_current_user`.
 - `app/api/deps.py` — dependency wiring. The provider is built once via `@lru_cache` (`_cached_provider`) so the HTTP client is reused; `ProviderConfigError` becomes HTTP 503.
 - `app/services/chat_service.py` — business logic, independent of HTTP and provider. Raises `ValueError` for invalid conversations. Turns the provider's `Usage` into a `UsageReport` with `cost_chf` (estimated in USD via `core/pricing.py`, converted with the fixed `USD_TO_CHF` rate; `None` for models without a known price).
@@ -58,7 +60,7 @@ If you change event names or encoding, update both `routers/chat.py` and `fronte
 
 ## Tests
 
-`tests/conftest.py` builds the app with `create_app()` and uses `dependency_overrides` to force `Settings(_env_file=None, llm_provider="fake")` and `FakeProvider(delay=0)` — tests never read the real `.env` or call OpenAI. Tests that exercise the real factory must clear `deps._cached_provider.cache_clear()` before and after (see `test_missing_api_key_returns_503`). Auth tests (`tests/test_auth.py`) sign tokens with a generated RSA key and override `get_jwks_client` with a fake — no network calls to Zitadel.
+`tests/conftest.py` builds the app with `create_app(settings)` and uses `dependency_overrides` to force `Settings(_env_file=None, llm_provider="fake")` and `FakeProvider(delay=0)` — tests never read the real `.env` or call OpenAI. Tests that exercise the real factory must clear `deps._cached_provider.cache_clear()` before and after (see `test_missing_api_key_returns_503`). Auth tests (`tests/test_auth.py`) sign tokens with a generated RSA key and override `get_jwks_client` with a fake — no network calls to Zitadel.
 
 ## Frontend
 

@@ -23,4 +23,6 @@ RUN useradd --create-home appuser
 USER appuser
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+# Shell form so $PORT (set by Railway) is expanded; exec keeps uvicorn as PID 1 for clean shutdown.
+# Trust X-Forwarded-* from any proxy: the container is only reachable through the platform proxy.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
