@@ -33,7 +33,13 @@ cd ../frontend && npm install
 
 ## Entwicklung
 
-Zwei Terminals:
+Backend und Frontend zusammen starten (Ctrl+C beendet beide), dann http://localhost:5173 öffnen:
+
+```bash
+./dev.sh
+```
+
+Oder einzeln in zwei Terminals:
 
 ```bash
 # Backend auf http://localhost:8000 (API-Doku unter /docs)

@@ -4,6 +4,8 @@ Lightweight AI chat web app: FastAPI backend (`backend/`), Svelte 5 + Vite + Typ
 
 ## Commands
 
+`./dev.sh` (repo root) starts backend and frontend dev servers together; Ctrl+C stops both.
+
 Backend (Python 3.12, managed with `uv`; run from `backend/`):
 
 ```bash
