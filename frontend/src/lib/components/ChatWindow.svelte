@@ -5,11 +5,20 @@
   import MessageInput from './MessageInput.svelte'
   import MessageList from './MessageList.svelte'
   import ThemeToggle from './ThemeToggle.svelte'
+  import { formatCost } from '../usage'
 
   let messages = $state<ChatMessage[]>([])
   let loading = $state(false)
   let error = $state<string | null>(null)
   let controller: AbortController | null = null
+
+  const answersWithUsage = $derived(messages.filter((m) => m.usage))
+  // Sum of the known costs; null (shown as "–") if no answer has a known price
+  const totalCost = $derived(
+    answersWithUsage.some((m) => m.usage?.cost_usd != null)
+      ? answersWithUsage.reduce((sum, m) => sum + (m.usage?.cost_usd ?? 0), 0)
+      : null,
+  )
 
   let scroller: HTMLElement
   // Only auto-scroll while the user is at the bottom, so they can scroll up during streaming
@@ -38,6 +47,7 @@
     try {
       await streamChat(history, {
         onToken: (token) => (answer.content += token),
+        onUsage: (usage) => (answer.usage = usage),
         signal: controller.signal,
       })
     } catch (e) {
@@ -71,6 +81,9 @@
       AI
     </div>
     <div class="actions">
+      {#if answersWithUsage.length > 0}
+        <span class="total" title="Geschätzte Kosten dieses Chats">{formatCost(totalCost)}</span>
+      {/if}
       {#if messages.length > 0}
         <button type="button" class="new-chat" onclick={newChat}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -156,6 +169,12 @@
     to {
       transform: rotate(360deg);
     }
+  }
+  .total {
+    margin-right: 0.25rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
   }
   .new-chat {
     display: flex;

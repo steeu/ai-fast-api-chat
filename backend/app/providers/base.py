@@ -1,12 +1,12 @@
 from collections.abc import AsyncIterator
 from typing import Protocol
 
-from app.schemas.chat import ChatMessage
+from app.schemas.chat import ChatMessage, Usage
 
 
 class LLMProvider(Protocol):
     """Common interface for all LLM providers (OpenAI, Anthropic, fake, ...)."""
 
-    def stream(self, messages: list[ChatMessage], system_prompt: str) -> AsyncIterator[str]:
-        """Yield the model's answer piece by piece as text deltas."""
+    def stream(self, messages: list[ChatMessage], system_prompt: str) -> AsyncIterator[str | Usage]:
+        """Yield the model's answer piece by piece as text deltas, then at most one Usage."""
         ...

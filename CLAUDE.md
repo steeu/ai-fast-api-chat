@@ -38,20 +38,20 @@ Layered, request flows top to bottom:
 - `app/main.py` — `create_app()` factory; mounts routers under `/api`; mounts `static/` at `/` only if it exists (i.e. in Docker).
 - `app/api/routers/` — thin HTTP layer. `chat.py` is `POST /api/chat/stream`; the whole chat router requires `get_current_user`.
 - `app/api/deps.py` — dependency wiring. The provider is built once via `@lru_cache` (`_cached_provider`) so the HTTP client is reused; `ProviderConfigError` becomes HTTP 503.
-- `app/services/chat_service.py` — business logic, independent of HTTP and provider. Raises `ValueError` for invalid conversations.
-- `app/providers/` — `LLMProvider` is a `Protocol` with `stream(messages, system_prompt) -> AsyncIterator[str]`. `factory.create_provider` selects by `settings.llm_provider`. `OpenAIProvider` uses the **Responses API** (`client.responses.create(..., stream=True)`), not Chat Completions.
+- `app/services/chat_service.py` — business logic, independent of HTTP and provider. Raises `ValueError` for invalid conversations. Turns the provider's `Usage` into a `UsageReport` with `cost_usd` (estimated via `core/pricing.py`; `None` for models without a known price).
+- `app/providers/` — `LLMProvider` is a `Protocol` with `stream(messages, system_prompt) -> AsyncIterator[str | Usage]` (text deltas, then at most one `Usage` with token counts). `factory.create_provider` selects by `settings.llm_provider`. `OpenAIProvider` uses the **Responses API** (`client.responses.create(..., stream=True)`), not Chat Completions.
 - `app/schemas/chat.py` — Pydantic request models (roles only `user`/`assistant`; system prompt is injected server-side from settings).
-- `app/core/config.py` — `Settings` (pydantic-settings) via cached `get_settings()`. `core/security.py` — Bearer auth; with `AUTH_ENABLED=false` every request is `ANONYMOUS_USER`. JWT validation is a **TODO stub**: with auth enabled, any Bearer token is accepted.
+- `app/core/config.py` — `Settings` (pydantic-settings) via cached `get_settings()`; `model_prices` merges `LLM_PRICES` (JSON in `.env`) over `DEFAULT_PRICES` from `core/pricing.py`. `core/security.py` — Bearer auth; with `AUTH_ENABLED=false` every request is `ANONYMOUS_USER`. JWT validation is a **TODO stub**: with auth enabled, any Bearer token is accepted.
 
 ### SSE contract (backend ↔ frontend)
 
-Events are `token`* followed by exactly one `done` or `error`. Uses FastAPI's built-in `fastapi.sse` (`EventSourceResponse`, `ServerSentEvent`), which **JSON-encodes `data`** — the frontend `JSON.parse`s each data field. Errors after streaming has started are sent as an `error` event (HTTP status stays 200): `ValueError` messages are passed through to the user, other exceptions are logged and replaced by a generic message. Errors raised before streaming (validation → 422, missing API key → 503) are normal HTTP errors with `detail`.
+Events are `token`*, then at most one `usage` (JSON object: `model`, token counts, `cost_usd` or `null`), followed by exactly one `done` or `error`. Uses FastAPI's built-in `fastapi.sse` (`EventSourceResponse`, `ServerSentEvent`), which **JSON-encodes `data`** — the frontend `JSON.parse`s each data field. Errors after streaming has started are sent as an `error` event (HTTP status stays 200): `ValueError` messages are passed through to the user, other exceptions are logged and replaced by a generic message. Errors raised before streaming (validation → 422, missing API key → 503) are normal HTTP errors with `detail`.
 
 If you change event names or encoding, update both `routers/chat.py` and `frontend/src/lib/api.ts` (and the `parse_sse` helper in `tests/test_chat.py`).
 
 ### Adding things
 
-- New provider: class with `async def stream(...)` in `providers/`, add a case in `factory.py`, extend the `llm_provider` `Literal` in `config.py`.
+- New provider: class with `async def stream(...)` in `providers/` (yield a `Usage` at the end), add a case in `factory.py`, extend the `llm_provider` `Literal` in `config.py`.
 - New endpoint: router in `api/routers/`, logic in a service in `services/`, include the router in `main.py`.
 
 ## Tests

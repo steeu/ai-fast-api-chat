@@ -1,12 +1,24 @@
 export type Role = 'user' | 'assistant'
 
+export interface Usage {
+  model: string
+  input_tokens: number
+  cached_tokens: number
+  output_tokens: number
+  reasoning_tokens: number
+  // Estimated, null if the model has no known price
+  cost_usd: number | null
+}
+
 export interface ChatMessage {
   role: Role
   content: string
+  usage?: Usage
 }
 
 export interface StreamHandlers {
   onToken: (text: string) => void
+  onUsage?: (usage: Usage) => void
   signal?: AbortSignal
 }
 
@@ -22,14 +34,18 @@ export function setAuthToken(token: string | null) {
  * The backend answers with Server-Sent Events. Since we use POST, EventSource can't be used,
  * so the stream is read and parsed manually.
  */
-export async function streamChat(messages: ChatMessage[], { onToken, signal }: StreamHandlers) {
+export async function streamChat(
+  messages: ChatMessage[],
+  { onToken, onUsage, signal }: StreamHandlers,
+) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (authToken) headers.Authorization = `Bearer ${authToken}`
 
   const response = await fetch('/api/chat/stream', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ messages }),
+    // Only role and content are part of the request, usage stays in the browser
+    body: JSON.stringify({ messages: messages.map(({ role, content }) => ({ role, content })) }),
     signal,
   })
   if (!response.ok || !response.body) {
@@ -54,13 +70,15 @@ export async function streamChat(messages: ChatMessage[], { onToken, signal }: S
 
       const { event, data } = parseEvent(block)
       if (event === 'token') onToken(data)
+      else if (event === 'usage') onUsage?.(data)
       else if (event === 'error') throw new Error(data)
       else if (event === 'done') return
     }
   }
 }
 
-function parseEvent(block: string): { event: string; data: string } {
+// data is JSON: a string for token/error, an object for usage
+function parseEvent(block: string): { event: string; data: any } {
   let event = 'message'
   let data = ''
   for (const line of block.split('\n')) {

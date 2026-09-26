@@ -1,6 +1,6 @@
 # Roadmap
 
-## 1. Kosten- und Token-Anzeige
+## 1. Kosten- und Token-Anzeige ✅ umgesetzt
 
 Nach jeder Antwort unter der Nachricht anzeigen: Input Tokens, Output Tokens, geschätzte Kosten, verwendetes Modell.
 

@@ -6,7 +6,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from app.api.deps import ChatServiceDep
 from app.core.security import get_current_user
-from app.schemas.chat import ChatRequest
+from app.schemas.chat import ChatRequest, UsageReport
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +17,13 @@ router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(get_curr
 async def stream_chat(
     request: ChatRequest, service: ChatServiceDep
 ) -> AsyncIterable[ServerSentEvent]:
-    """Stream the answer as Server-Sent Events: `token`* followed by `done` or `error`."""
+    """Stream the answer as SSE: `token`*, optional `usage`, then `done` or `error`."""
     try:
-        async for delta in service.stream_reply(request.messages):
-            yield ServerSentEvent(data=delta, event="token")
+        async for item in service.stream_reply(request.messages):
+            if isinstance(item, UsageReport):
+                yield ServerSentEvent(data=item.model_dump(), event="usage")
+            else:
+                yield ServerSentEvent(data=item, event="token")
     except ValueError as exc:
         yield ServerSentEvent(data=str(exc), event="error")
         return

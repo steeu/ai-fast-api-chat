@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ChatMessage } from '../api'
   import { renderMarkdown } from '../markdown'
+  import { formatUsage } from '../usage'
 
   let { messages, loading }: { messages: ChatMessage[]; loading: boolean } = $props()
 </script>
@@ -17,6 +18,9 @@
           <div class="typing" aria-label="Antwort wird geschrieben">
             <span></span><span></span><span></span>
           </div>
+        {/if}
+        {#if message.usage}
+          <div class="meta" title="Geschätzte Kosten, ohne Gewähr">{formatUsage(message.usage)}</div>
         {/if}
       </div>
     {/if}
@@ -114,6 +118,13 @@
   .markdown :global(td) {
     padding: 0.4rem 0.7rem;
     border: 1px solid var(--border);
+  }
+
+  .meta {
+    margin-top: 0.5rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .typing {

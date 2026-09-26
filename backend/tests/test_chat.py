@@ -29,6 +29,20 @@ def test_stream_returns_tokens_then_done(client: TestClient) -> None:
     assert events[-1][0] == "done"
 
 
+def test_usage_event_comes_before_done(client: TestClient) -> None:
+    response = client.post(
+        "/api/chat/stream", json={"messages": [{"role": "user", "content": "Hallo Welt"}]}
+    )
+    events = parse_sse(response.text)
+
+    assert [event for event, _ in events[-2:]] == ["usage", "done"]
+    usage = events[-2][1]
+    assert usage["model"] == "fake"
+    assert usage["output_tokens"] == 3
+    # The fake model has no price, so no cost is claimed
+    assert usage["cost_usd"] is None
+
+
 def test_last_message_must_be_from_user(client: TestClient) -> None:
     response = client.post(
         "/api/chat/stream", json={"messages": [{"role": "assistant", "content": "Hi"}]}
